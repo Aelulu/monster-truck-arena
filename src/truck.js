@@ -323,6 +323,7 @@ export class Truck {
     this.raycaster = new THREE.Raycaster();
     this.down = new THREE.Vector3(0, -1, 0);
     this.groundNormal = new THREE.Vector3(0, 1, 0);
+    this.spawn = new THREE.Vector3();
     this.reset();
   }
 
@@ -336,7 +337,7 @@ export class Truck {
   }
 
   reset() {
-    this.root.position.set(0, 0, 0);
+    this.root.position.copy(this.spawn || new THREE.Vector3());
     this.heading = 0;
     this.speed = 0;
     this.verticalVel = 0;

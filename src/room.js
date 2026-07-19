@@ -69,7 +69,8 @@ export function buildRoom(scene) {
   const trackMat = new THREE.MeshStandardMaterial({ color: 0xf07f13, roughness: 0.55 });
   const railMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
   const roadSamples = [];
-  const buildLoop = (radiusAt, width, samples = 200) => {
+  const buildLoop = (radiusAt, width, samples = 200, opts = {}) => {
+    const { y = 0.06, collect = true, drivable = false } = opts;
     const pts = [];
     for (let i = 0; i < samples; i++) {
       const a = (i / samples) * Math.PI * 2;
@@ -84,14 +85,14 @@ export function buildRoom(scene) {
       const nrm = new THREE.Vector3(-tan.z, 0, tan.x);
       const l = new THREE.Vector3().addScaledVector(nrm, width / 2).add(p0);
       const r2 = new THREE.Vector3().addScaledVector(nrm, -width / 2).add(p0);
-      pos.push(l.x, 0.06, l.z, r2.x, 0.06, r2.z);
+      pos.push(l.x, y, l.z, r2.x, y, r2.z);
       const a2 = i * 2, b2 = ((i + 1) % samples) * 2;
       idx.push(a2, b2, a2 + 1, b2, b2 + 1, a2 + 1);
-      roadSamples.push(p0);
+      if (collect) roadSamples.push(p0);
       if (i % 3 === 0) {
         for (const edge of [l, r2]) {
           const rail = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.5, 0.6), railMat);
-          rail.position.set(edge.x, 0.25, edge.z);
+          rail.position.set(edge.x, y + 0.2, edge.z);
           rail.rotation.y = Math.atan2(tan.x, tan.z) + Math.PI / 2;
           scene.add(rail);
         }
@@ -102,11 +103,27 @@ export function buildRoom(scene) {
     geo.setIndex(idx);
     geo.computeVertexNormals();
     const road = new THREE.Mesh(geo, trackMat);
+    road.material = new THREE.MeshStandardMaterial({ color: 0xf07f13, roughness: 0.55, side: THREE.DoubleSide });
     road.receiveShadow = true;
+    road.castShadow = drivable;
     scene.add(road);
+    if (drivable) drivables.push(road);
   };
   buildLoop((a) => 105 + Math.sin(a * 2) * 22, 13);
   buildLoop((a) => 52 + Math.sin(a * 3 + 1.2) * 14, 12);
+
+  // --- Second floor: a wide winding elevated track loop at loft height,
+  // reached by two long ramps. Drive under it, drive on it, fly off it.
+  buildLoop((a) => 80 + Math.sin(a * 3) * 14, 16, 200, { y: 26, collect: false, drivable: true });
+  const pillarMat = new THREE.MeshStandardMaterial({ color: 0xd9d4c8, roughness: 0.8 });
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2 + 0.25;
+    const r = 80 + Math.sin(a * 3) * 14;
+    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.8, 25.6, 10), pillarMat);
+    pillar.position.set(Math.cos(a) * r, 12.8, Math.sin(a) * r);
+    pillar.castShadow = true;
+    scene.add(pillar);
+  }
 
   // --- Ramps (orange toy plastic) — everywhere ---
   const rampMat = new THREE.MeshStandardMaterial({ color: 0xf07f13, roughness: 0.5 });
@@ -145,6 +162,8 @@ export function buildRoom(scene) {
     scene.add(ramp);
     drivables.push(ramp);
   };
+  addRamp(46, 0, 0, 14, 60, 26);        // access ramp UP to the second floor (east)
+  addRamp(-46, 0, Math.PI, 14, 60, 26);  // access ramp up (west)
   addRamp(105, 0, Math.PI, 11, 15, 5);
   addRamp(-100, -30, 0, 11, 15, 5);
   addRamp(0, 108, Math.PI / 2, 11, 16, 6);

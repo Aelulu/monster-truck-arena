@@ -1,14 +1,14 @@
 import * as THREE from 'three';
-import { input } from './input.js?v1784501086';
-import { buildWorld } from './world.js?v1784501086';
-import { buildCity } from './city.js?v1784501086';
-import { buildRoom } from './room.js?v1784501086';
-import { Truck } from './truck.js?v1784501086';
-import { Garage } from './garage.js?v1784501086';
-import { BoostFlames } from './effects.js?v1784501086';
-import { Ball } from './ball.js?v1784501086';
-import { loadCharacters } from './characters.js?v1784501086';
-import { audio } from './audio.js?v1784501086'; // synthesized engine + crash sounds
+import { input } from './input.js?v1784501544';
+import { buildWorld } from './world.js?v1784501544';
+import { buildCity } from './city.js?v1784501544';
+import { buildRoom } from './room.js?v1784501544';
+import { Truck } from './truck.js?v1784501544';
+import { Garage } from './garage.js?v1784501544';
+import { BoostFlames } from './effects.js?v1784501544';
+import { Ball } from './ball.js?v1784501544';
+import { loadCharacters } from './characters.js?v1784501544';
+import { audio } from './audio.js?v1784501544'; // synthesized engine + crash sounds
 
 // --- Renderer & scene ---
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -52,6 +52,9 @@ window.addEventListener('keydown', (e) => {
 const garage = new Garage();
 await garage.init();
 const truck = new Truck();
+const SPAWNS = { arena: [0, 0], city: [0, -70], room: [0, 0] };
+truck.spawn.set(SPAWNS[mapName][0], 0, SPAWNS[mapName][1]);
+truck.reset();
 scene.add(truck.root);
 const flames = new BoostFlames(truck.root);
 const ball = new Ball(scene);

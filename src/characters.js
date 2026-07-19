@@ -65,14 +65,14 @@ const CONFIGS = [
     url: 'assets/woody.glb',
     rigStyle: 'skeleton',
     height: 3.4,
-    homes: [[0, 133], [-115, -66], [80, 108]],
+    homes: [[0, 141.6], [-127.8, -73.8], [133, 76.8]], // tier rows, among the crowd
     runSpeed: 7,
     fleeRadius: 26,
     facing: 0,
     collectible: 'coins',
     fleeSound: 'woody',
     armStyle: 'flail',
-    radiusRange: [129, 164], // stays up in the bleacher ring
+    radiusRange: [133, 164], // stays up among the seated rows
     rideTop: true,           // stands on TOP of the bleachers, not under them
     bones: WOODY_BONES,
   },
@@ -97,7 +97,7 @@ const CONFIGS = [
     url: 'assets/buzz.glb',
     rigStyle: 'skeleton',
     height: 4.0,
-    homes: [[94, -94], [-134, 0], [66, 117]],
+    homes: [[100.1, -100.1], [-147.6, 0], [79.8, 138.2]], // tier rows, among the crowd
     runSpeed: 8,
     fleeRadius: 26,
     facing: 0,
@@ -105,7 +105,7 @@ const CONFIGS = [
     fleeSound: 'buzz',
     armStyle: 'pump',
     armAmp: 1.6,
-    radiusRange: [129, 164],
+    radiusRange: [133, 164],
     rideTop: true,
     bones: BUZZ_BONES,
   },

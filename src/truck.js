@@ -450,7 +450,7 @@ export class Truck {
     // surface tilt to keep the whole truck above the surface.
     const lift = surface ? (1 - surface.normal.y) * 2.4 : 0;
     const effY = groundY + lift;
-    if (this.grounded && this.verticalVel <= 0.01 && this.climbRate < 8 &&
+    if (this.grounded && this.verticalVel <= 0.01 && this.climbRate < 20 &&
         this.root.position.y > effY - 0.01 && this.root.position.y < effY + 1.3) {
       // planted: follow terrain downhill (banking, mound backsides) instead
       // of micro-detaching into the air every frame. Ramp lips still launch
@@ -472,7 +472,7 @@ export class Truck {
       this.jumpsUsed = 0;
       if (surface) this.groundNormal.lerp(surface.normal, Math.min(1, dt * 25));
     } else if (this.root.position.y > effY + 0.15) {
-      if (this.grounded && this.climbRate > 1) {
+      if (this.grounded && this.climbRate > 6) {
         // Just left a ramp lip — launch, with extra hang time for tricks.
         const launch = Math.min(this.climbRate * TUNING.launchBoost, TUNING.launchCap);
         this.verticalVel = Math.max(this.verticalVel, launch);

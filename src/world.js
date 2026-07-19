@@ -204,64 +204,96 @@ export function buildWorld(scene) {
   for (let i = 0; i < 24; i++) {
     const angle = (i / 24) * Math.PI * 2;
     const tire = new THREE.Mesh(tireGeo, tireMat);
-    tire.position.set(Math.cos(angle) * 169, 0.45 + 17.6, Math.sin(angle) * 169);
+    tire.position.set(Math.cos(angle) * 127, 0.45, Math.sin(angle) * 127);
     tire.castShadow = true;
     scene.add(tire);
   }
 
-  // --- Banked ring road: wraps the whole stadium, curving up and inward
-  // like a velodrome. Carve around it at speed, ride high on the banking,
-  // and launch off it — the curve feeds straight into the ramp-launch physics.
-  // Mario Kart-style: the road is FLAT across its width but tilted as a
-  // whole (constant bank angle ≈ 23°), wrapping the stadium like a speedway.
-  const BANK_INNER = 128;
-  const BANK_OUTER = 170;
-  const BANK_SLOPE = 18 / (BANK_OUTER - BANK_INNER);
-  const roadY = (r) => (r <= BANK_INNER ? 0 : (r - BANK_INNER) * BANK_SLOPE);
+  // --- Stadium: open bowl — drive up into the bleachers from anywhere ---
+  // The stepped tiers stay visual; an invisible smooth cone collider matching
+  // their envelope makes the whole 360° ring drivable like a bowl. The outer
+  // clamp (in truck.js) keeps trucks inside, closing the stadium all around.
   {
-    const pts = [
-      new THREE.Vector2(BANK_INNER, 0),
-      new THREE.Vector2(BANK_OUTER, roadY(BANK_OUTER)),
+    const profile = [
+      new THREE.Vector2(126, 0),
+      new THREE.Vector2(170, 16.4),
+      new THREE.Vector2(172.5, 16.4),
     ];
-    const bank = new THREE.Mesh(
-      new THREE.LatheGeometry(pts, 96),
-      new THREE.MeshStandardMaterial({ color: 0x4f545e, roughness: 0.9, side: THREE.DoubleSide })
+    // Raycasts cull backfaces per material.side, and a lathe's normals face
+    // inward — DoubleSide so rays from above actually land on the bowl.
+    const bowl = new THREE.Mesh(
+      new THREE.LatheGeometry(profile, 72),
+      new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })
     );
-    bank.receiveShadow = true;
-    scene.add(bank);
-    drivables.push(bank);
-  }
-  // Mario Kart red/white curbs along both edges, and a dashed center line
-  const curbMats = [
-    new THREE.MeshStandardMaterial({ color: 0xd63031, roughness: 0.6 }),
-    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }),
-  ];
-  const bankAngle = Math.atan(BANK_SLOPE);
-  for (const [rr, count] of [[130.5, 56], [167, 68]]) {
-    const arc = (2 * Math.PI * rr) / count;
-    for (let i = 0; i < count; i++) {
-      const a = (i / count) * Math.PI * 2;
-      const curb = new THREE.Mesh(new THREE.BoxGeometry(arc * 0.92, 0.35, 3), curbMats[i % 2]);
-      const y = roadY(rr) + 0.1;
-      curb.position.set(Math.cos(a) * rr, y, Math.sin(a) * rr);
-      curb.lookAt(0, y - Math.tan(bankAngle) * rr * 0.0, 0);
-      curb.rotateX(-bankAngle); // lie flush on the tilted road
-      scene.add(curb);
-    }
-  }
-  const dashMat = new THREE.MeshStandardMaterial({ color: 0xf6e58d, roughness: 0.6 });
-  for (let i = 0; i < 40; i++) {
-    const a = (i / 40) * Math.PI * 2;
-    const rr = 149;
-    const dash = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.06, 5), dashMat);
-    const y = roadY(rr) + 0.12;
-    dash.position.set(Math.cos(a) * rr, y, Math.sin(a) * rr);
-    dash.lookAt(0, y, 0);
-    dash.rotateX(-bankAngle);
-    scene.add(dash);
+    bowl.visible = false; // collider only — raycasts still hit it
+    scene.add(bowl);
+    drivables.push(bowl);
   }
 
+  // Grandstands ring the whole arena: stepped tiers rising away from the wall
+  const SECTIONS = 14;
+  const TIERS = 6;
+  const tierMats = [
+    new THREE.MeshStandardMaterial({ color: 0x37474f, roughness: 0.9 }),
+    new THREE.MeshStandardMaterial({ color: 0x455a64, roughness: 0.9 }),
+  ];
+  for (let s = 0; s < SECTIONS; s++) {
+    const mid = ((s + 0.5) / SECTIONS) * Math.PI * 2;
+    for (let t = 0; t < TIERS; t++) {
+      const r = 137 + t * 6;
+      const w = 2 * r * Math.tan(Math.PI / SECTIONS) * 0.9;
+      const step = new THREE.Mesh(new THREE.BoxGeometry(w, 2.7, 6.2), tierMats[t % 2]);
+      step.position.set(Math.cos(mid) * r, 1.35 + t * 2.7, Math.sin(mid) * r);
+      step.lookAt(0, step.position.y, 0);
+      scene.add(step);
+      // NOT drivable: the straight boxes jut through the curved bowl and
+      // their hidden edges flipped trucks. The smooth bowl collider is the
+      // only stands physics surface — steps are visual.
+    }
+  }
+
+  // Crowd: instanced spectators on every tier, bobbing and cheering
+  const SEATS = 24;
+  const crowdCount = SECTIONS * TIERS * SEATS;
+  const bodies = new THREE.InstancedMesh(
+    new THREE.CapsuleGeometry(0.34, 0.7, 3, 8), new THREE.MeshLambertMaterial(), crowdCount);
+  const heads = new THREE.InstancedMesh(
+    new THREE.SphereGeometry(0.26, 8, 8), new THREE.MeshLambertMaterial(), crowdCount);
   const skins = [0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524, 0xffdbac];
+  const seats = [];
+  const m = new THREE.Matrix4();
+  const color = new THREE.Color();
+  let idx = 0;
+  for (let s = 0; s < SECTIONS; s++) {
+    const a0 = (s / SECTIONS) * Math.PI * 2;
+    const span = (Math.PI * 2) / SECTIONS;
+    for (let t = 0; t < TIERS; t++) {
+      const baseR = 137 + t * 6 - 1.4;
+      const yTop = 2.7 + t * 2.7;
+      for (let k = 0; k < SEATS; k++) {
+        const a = a0 + span * (0.07 + (0.86 * (k + 0.5)) / SEATS);
+        const r = baseR + (Math.random() - 0.5) * 2.6;
+        const x = Math.cos(a) * r;
+        const z = Math.sin(a) * r;
+        const y = yTop + 0.6;
+        seats.push({
+          x, y, z, homeX: x, homeY: y, homeZ: z,
+          phase: Math.random() * Math.PI * 2, amp: 0.05 + Math.random() * 0.12,
+          state: 'alive', vx: 0, vy: 0, vz: 0, tumble: 0, deadUntil: 0,
+        });
+        m.makeTranslation(x, y, z);
+        bodies.setMatrixAt(idx, m);
+        m.makeTranslation(x, y + 0.66, z);
+        heads.setMatrixAt(idx, m);
+        bodies.setColorAt(idx, color.setHSL(Math.random(), 0.72, 0.5));
+        heads.setColorAt(idx, color.set(skins[(Math.random() * skins.length) | 0]));
+        idx++;
+      }
+    }
+  }
+  bodies.instanceColor.needsUpdate = true;
+  heads.instanceColor.needsUpdate = true;
+  scene.add(bodies, heads);
 
   // Floodlight towers at the four corners
   const poleMat = new THREE.MeshStandardMaterial({ color: 0x9e9e9e, roughness: 0.5, metalness: 0.7 });
@@ -269,16 +301,16 @@ export function buildWorld(scene) {
   for (let k = 0; k < 4; k++) {
     const a = (k / 4) * Math.PI * 2 + Math.PI / 4;
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 34, 10), poleMat);
-    pole.position.set(Math.cos(a) * 175, 17, Math.sin(a) * 175);
+    pole.position.set(Math.cos(a) * 158, 17, Math.sin(a) * 158);
     const lamp = new THREE.Mesh(new THREE.BoxGeometry(7, 3.2, 1.4), lampMat);
-    lamp.position.set(Math.cos(a) * 173, 35.5, Math.sin(a) * 173);
+    lamp.position.set(Math.cos(a) * 156, 35.5, Math.sin(a) * 156);
     lamp.lookAt(0, 5, 0);
     scene.add(pole, lamp);
   }
 
   // Floor crowd: pedestrians loose in the arena. They mill around until the
   // truck gets close, then sprint away from it — chase them down for hits.
-  const RUNNERS = 140;
+  const RUNNERS = 70;
   const runnerBodies = new THREE.InstancedMesh(
     new THREE.CapsuleGeometry(0.34, 0.7, 3, 8), new THREE.MeshLambertMaterial(), RUNNERS);
   const runnerHeads = new THREE.InstancedMesh(
@@ -286,18 +318,13 @@ export function buildWorld(scene) {
   const runners = [];
   const runnerSpawn = () => {
     const a = Math.random() * Math.PI * 2;
-    // 55% roam the arena floor, 45% run laps of the ring road
-    const onRoad = Math.random() < 0.45;
-    const r = onRoad ? 132 + Math.random() * 34 : 15 + Math.random() * 85;
-    return {
-      x: Math.cos(a) * r, z: Math.sin(a) * r,
-      rMin: onRoad ? 130 : 0, rMax: onRoad ? 168 : 121,
-    };
+    const r = 15 + Math.random() * 85;
+    return { x: Math.cos(a) * r, z: Math.sin(a) * r };
   };
   for (let i = 0; i < RUNNERS; i++) {
-    const { x, z, rMin, rMax } = runnerSpawn();
+    const { x, z } = runnerSpawn();
     runners.push({
-      x, y: 0.9, z, rMin, rMax,
+      x, y: 0.9, z,
       dir: Math.random() * Math.PI * 2,
       speed: 0,
       wanderAt: 0,
@@ -355,13 +382,12 @@ export function buildWorld(scene) {
   const runnerDown = new THREE.Vector3(0, -1, 0);
   const runnerOrigin = new THREE.Vector3();
   const blockedAhead = (x, z) => {
-    const expected = roadY(Math.hypot(x, z));
-    runnerRay.set(runnerOrigin.set(x, expected + 8, z), runnerDown);
-    runnerRay.far = 30;
+    runnerRay.set(runnerOrigin.set(x, 8, z), runnerDown);
+    runnerRay.far = 20;
     const hits = runnerRay.intersectObjects(drivables, false);
     if (!hits.length) return false;
-    const hit = hits.find((h) => h.point.y <= expected + 1.2) || hits[hits.length - 1];
-    return hit.point.y > expected + 0.9; // something taller than the road ahead
+    const hit = hits.find((h) => h.point.y <= 1.2) || hits[hits.length - 1];
+    return hit.point.y > 0.6; // ramp/mound/stands in the way
   };
   const crowdM = new THREE.Matrix4();
   const crowdQ = new THREE.Quaternion();
@@ -371,6 +397,67 @@ export function buildWorld(scene) {
   const update = (dt, impactors = []) => {
     time += dt;
     frame++;
+
+    // Anything fast entering the stands sends spectators flying
+    for (const imp of impactors) {
+      if (Math.hypot(imp.x, imp.z) < 126) continue; // not near the stands
+      for (const p of seats) {
+        if (p.state !== 'alive') continue;
+        const dx = p.x - imp.x, dy = p.y - imp.y, dz = p.z - imp.z;
+        const reach = imp.radius + 1.3;
+        if (Math.abs(dy) > 3.4 || dx * dx + dz * dz > reach * reach) continue;
+        const d = Math.max(Math.hypot(dx, dz), 0.5);
+        const push = Math.max(imp.speed * 0.55, 9);
+        p.state = 'flying';
+        p.vx = (dx / d) * push + imp.vx * 0.4 + (Math.random() - 0.5) * 6;
+        p.vz = (dz / d) * push + imp.vz * 0.4 + (Math.random() - 0.5) * 6;
+        p.vy = 9 + Math.random() * 7 + imp.speed * 0.18;
+        p.tumble = Math.random() * Math.PI * 2;
+        burst(p.x, p.y, p.z);
+        crowdHits++;
+        document.dispatchEvent(new CustomEvent('crowd-hit', { detail: crowdHits }));
+      }
+    }
+
+    const half = frame % 2; // seated crowd bobs at half rate (invisible, halves the cost)
+    for (let j = 0; j < seats.length; j++) {
+      const p = seats[j];
+      if (p.state === 'alive') {
+        if (j % 2 === half) continue;
+        const bob = Math.sin(time * 2.2 + p.phase) * p.amp + Math.sin(time * 0.9 + p.x * 0.04) * 0.05;
+        crowdM.makeTranslation(p.x, p.y + bob, p.z);
+        bodies.setMatrixAt(j, crowdM);
+        crowdM.makeTranslation(p.x, p.y + 0.66 + bob * 1.2, p.z);
+        heads.setMatrixAt(j, crowdM);
+      } else if (p.state === 'flying') {
+        p.vy -= 26 * dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.z += p.vz * dt;
+        p.tumble += dt * 11;
+        if (p.y < 0.2 && p.vy < 0) {
+          p.state = 'dead';
+          p.deadUntil = time + 16 + Math.random() * 12;
+        }
+        crowdQ.setFromEuler(crowdE.set(p.tumble, p.tumble * 0.6, p.tumble * 0.3));
+        crowdM.compose(new THREE.Vector3(p.x, p.y, p.z), crowdQ, ONE);
+        bodies.setMatrixAt(j, crowdM);
+        crowdM.compose(new THREE.Vector3(p.x, p.y + 0.66, p.z), crowdQ, ONE);
+        heads.setMatrixAt(j, crowdM);
+      } else {
+        // dead: hidden until they sheepishly retake their seat
+        if (time > p.deadUntil) {
+          p.state = 'alive';
+          p.x = p.homeX; p.y = p.homeY; p.z = p.homeZ;
+        } else {
+          crowdM.compose(ZERO, crowdQ.identity(), ZERO);
+          bodies.setMatrixAt(j, crowdM);
+          heads.setMatrixAt(j, crowdM);
+        }
+      }
+    }
+    bodies.instanceMatrix.needsUpdate = true;
+    heads.instanceMatrix.needsUpdate = true;
 
     // Floor runners: wander, flee, get launched
     for (let j = 0; j < RUNNERS; j++) {
@@ -405,9 +492,8 @@ export function buildWorld(scene) {
           p.z = nz;
         }
         const rad = Math.hypot(p.x, p.z);
-        if (rad > p.rMax) { p.x *= p.rMax / rad; p.z *= p.rMax / rad; p.dir += Math.PI * 0.6; }
-        else if (p.rMin > 0 && rad < p.rMin && rad > 0.01) { p.x *= p.rMin / rad; p.z *= p.rMin / rad; p.dir += Math.PI * 0.6; }
-        p.y = 0.9 + roadY(Math.hypot(p.x, p.z)); // hug the banking
+        const lim = 121;
+        if (rad > lim) { p.x *= lim / rad; p.z *= lim / rad; p.dir += Math.PI * 0.6; }
 
         // stomped?
         if (threat && threatD < threat.radius + 1.1 && threat.speed > 4) {
@@ -446,10 +532,9 @@ export function buildWorld(scene) {
         runnerHeads.setMatrixAt(j, crowdM);
       } else {
         if (time > p.deadUntil) {
-          const { x, z, rMin, rMax } = runnerSpawn();
+          const { x, z } = runnerSpawn();
           p.state = 'alive';
           p.x = x; p.y = 0.9; p.z = z;
-          p.rMin = rMin; p.rMax = rMax;
           p.speed = 0;
         } else {
           crowdM.compose(ZERO, crowdQ.identity(), ZERO);

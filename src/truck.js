@@ -360,7 +360,14 @@ export class Truck {
     // Highest surface at-or-below the truck, so driving under the elevated
     // highway doesn't snap the truck onto its roadway. (Hits arrive sorted
     // top-down.) Falling from above still lands on the top surface.
-    const hit = hits.find((h) => h.point.y <= this.root.position.y + 1.5) || hits[hits.length - 1];
+    // Preference order: surface at wheel level; else a surface a short hop
+    // above (climbing the banked ring from its low edge — without this the
+    // truck slips underneath the road and is trapped under it); else the
+    // lowest surface (driving under the elevated highway, gap > 8).
+    const py = this.root.position.y;
+    const hit = hits.find((h) => h.point.y <= py + 1.5) ||
+      hits.find((h) => h.point.y <= py + 8) ||
+      hits[hits.length - 1];
     const normal = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
     return { height: hit.point.y, normal };
   }

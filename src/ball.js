@@ -55,7 +55,8 @@ export class Ball {
     const normal = new THREE.Vector3(0, 1, 0);
     if (hits.length) {
       // highest surface at-or-below the ball, so it can roll under the highway
-      const hit = hits.find((h) => h.point.y <= p.y + 1) || hits[hits.length - 1];
+      const hit = hits.find((h) => h.point.y <= p.y + 1) ||
+        hits.find((h) => h.point.y <= p.y + 8) || hits[hits.length - 1];
       groundY = hit.point.y;
       normal.copy(hit.face.normal).transformDirection(hit.object.matrixWorld);
     }

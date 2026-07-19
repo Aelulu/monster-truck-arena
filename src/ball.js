@@ -40,7 +40,7 @@ export class Ball {
     this.vel.set(0, 0, 0);
   }
 
-  update(dt, truck, drivables, bounds) {
+  update(dt, truck, drivables, bounds, solids = null) {
     const p = this.mesh.position;
     this.vel.y += GRAVITY * dt;
     p.addScaledVector(this.vel, dt);
@@ -81,6 +81,23 @@ export class Ball {
       if (vr > 0) {
         this.vel.x -= (1 + RESTITUTION) * vr * nx;
         this.vel.z -= (1 + RESTITUTION) * vr * nz;
+      }
+    }
+
+    // solid buildings (city): bounce off walls
+    if (solids) {
+      for (const b of solids) {
+        if (p.y - RADIUS > b.h) continue;
+        const pad = RADIUS * 0.8;
+        if (p.x > b.minX - pad && p.x < b.maxX + pad && p.z > b.minZ - pad && p.z < b.maxZ + pad) {
+          const dxl = p.x - (b.minX - pad), dxr = (b.maxX + pad) - p.x;
+          const dzl = p.z - (b.minZ - pad), dzr = (b.maxZ + pad) - p.z;
+          const mn = Math.min(dxl, dxr, dzl, dzr);
+          if (mn === dxl) { p.x = b.minX - pad; if (this.vel.x > 0) this.vel.x *= -RESTITUTION; }
+          else if (mn === dxr) { p.x = b.maxX + pad; if (this.vel.x < 0) this.vel.x *= -RESTITUTION; }
+          else if (mn === dzl) { p.z = b.minZ - pad; if (this.vel.z > 0) this.vel.z *= -RESTITUTION; }
+          else { p.z = b.maxZ + pad; if (this.vel.z < 0) this.vel.z *= -RESTITUTION; }
+        }
       }
     }
 

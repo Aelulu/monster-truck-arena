@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-import { tightBox } from './truck.js?v5';
+import { tightBox } from './truck.js?v6';
 
 // Arena characters — they watch the truck from afar, sprint away when it
 // closes in, and get launched (bursting collectibles) when run over.
@@ -147,12 +147,33 @@ function lootParts(kind) {
   };
 }
 
-export async function loadCharacters(scene) {
+// City-map homes: everyone stands on the streets (one coordinate on an avenue)
+const CITY_HOMES = {
+  sonic: [[0, -30]],
+  woody: [[0, 22], [-40, 58], [80, -25], [0, -95]],
+  buzz: [[40, 30], [-80, -52], [0, 66], [-40, -15]],
+  alien: [[-40, 12], [-40, 17], [-40, 22]],
+};
+
+function charInSolid(solids, x, z, y) {
+  if (!solids) return false;
+  for (const b of solids) {
+    if (y < b.h - 1 && x > b.minX - 0.6 && x < b.maxX + 0.6 && z > b.minZ - 0.6 && z < b.maxZ + 0.6) return true;
+  }
+  return false;
+}
+
+export async function loadCharacters(scene, mapName = 'arena') {
   const loader = new GLTFLoader();
   const gltfCache = new Map();
   const chars = [];
-  for (const cfg of CONFIGS) {
+  for (let cfg of CONFIGS) {
     try {
+      if (mapName === 'city') {
+        if (cfg.rideTop) continue; // no speedway ring in the city
+        const kind = (cfg.url.match(/sonic|woody|buzz|alien/) || [])[0];
+        cfg = { ...cfg, homes: (kind && CITY_HOMES[kind]) || cfg.homes, extraRandom: null };
+      }
       if (!gltfCache.has(cfg.url)) gltfCache.set(cfg.url, loader.loadAsync(cfg.url));
       const gltf = await gltfCache.get(cfg.url);
       const homes = [...cfg.homes];
@@ -330,7 +351,7 @@ export class Character {
     this.lootBurst();
   }
 
-  update(dt, truck, ball, drivables) {
+  update(dt, truck, ball, drivables, solids = null) {
     this.time += dt;
     const p = this.root.position;
     const cfg = this.cfg;
@@ -392,7 +413,8 @@ export class Character {
       const nz = p.z + Math.cos(this.dir) * this.speed * dt;
       const airborne = this.glide > 0 || this.hopV > 0;
       const surfH = drivables ? surfaceHeightAt(nx, nz, cfg.rideTop ? 40 : p.y, drivables) : 0;
-      if (!airborne && this.speed > 0.4 && drivables && surfH > p.y + 0.9) {
+      if (!airborne && this.speed > 0.4 && drivables &&
+          (surfH > p.y + 0.9 || charInSolid(solids, nx, nz, p.y))) {
         // wall, ramp face, or too-tall step — bounce off, don't ghost through
         this.dir += 1.3 + Math.random() * 0.9;
       } else {

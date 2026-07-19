@@ -365,7 +365,7 @@ export class Truck {
     return { height: hit.point.y, normal };
   }
 
-  update(dt, input, drivables, bounds) {
+  update(dt, input, drivables, bounds, solids = null) {
     if (!this.visual) return;
     if (input.consumeReset()) this.reset();
 
@@ -396,9 +396,28 @@ export class Truck {
     const p = this.root.position;
     const outer = Math.hypot(p.x, p.z);
     if (outer > 168) {
+      // slide along the rim — never bleed speed here, or riding the high
+      // banking line grinds the truck to a halt
       p.x *= 168 / outer;
       p.z *= 168 / outer;
-      this.speed *= 0.9;
+    }
+
+    // solid buildings (city map): push out along the smallest overlap axis
+    if (solids) {
+      for (const b of solids) {
+        if (p.y > b.h - 1.2) continue; // on the roof is fine
+        const m2 = 1.9;
+        if (p.x > b.minX - m2 && p.x < b.maxX + m2 && p.z > b.minZ - m2 && p.z < b.maxZ + m2) {
+          const dxl = p.x - (b.minX - m2), dxr = (b.maxX + m2) - p.x;
+          const dzl = p.z - (b.minZ - m2), dzr = (b.maxZ + m2) - p.z;
+          const mn = Math.min(dxl, dxr, dzl, dzr);
+          if (mn === dxl) p.x = b.minX - m2;
+          else if (mn === dxr) p.x = b.maxX + m2;
+          else if (mn === dzl) p.z = b.minZ - m2;
+          else p.z = b.maxZ + m2;
+          this.speed *= 0.5; // crunch
+        }
+      }
     }
 
     // --- Vertical: follow terrain, or fall ---
@@ -419,7 +438,15 @@ export class Truck {
     this.verticalVel += TUNING.gravity * dt;
     this.root.position.y += this.verticalVel * dt;
 
-    if (this.root.position.y <= groundY + 0.01 && this.verticalVel <= 0) {
+    if (this.grounded && this.verticalVel <= 0.01 && this.climbRate < 8 &&
+        this.root.position.y > groundY && this.root.position.y < groundY + 1.3) {
+      // planted: follow terrain downhill (banking, mound backsides) instead
+      // of micro-detaching into the air every frame. Ramp lips still launch
+      // because their climbRate is far above the threshold.
+      this.root.position.y = groundY;
+      this.verticalVel = 0;
+      if (surface) this.groundNormal.lerp(surface.normal, Math.min(1, dt * 12));
+    } else if (this.root.position.y <= groundY + 0.01 && this.verticalVel <= 0) {
       if (!this.grounded && this.airTime > 0.35) {
         this.squash = Math.min(1, this.airTime * 0.7); // landing thump
         if (typeof document !== 'undefined') {

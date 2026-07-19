@@ -1,12 +1,13 @@
 import * as THREE from 'three';
-import { input } from './input.js?v5';
-import { buildWorld } from './world.js?v5';
-import { Truck } from './truck.js?v5';
-import { Garage } from './garage.js?v5';
-import { BoostFlames } from './effects.js?v5';
-import { Ball } from './ball.js?v5';
-import { loadCharacters } from './characters.js?v5';
-import { audio } from './audio.js?v5'; // synthesized engine + crash sounds
+import { input } from './input.js?v6';
+import { buildWorld } from './world.js?v6';
+import { buildCity } from './city.js?v6';
+import { Truck } from './truck.js?v6';
+import { Garage } from './garage.js?v6';
+import { BoostFlames } from './effects.js?v6';
+import { Ball } from './ball.js?v6';
+import { loadCharacters } from './characters.js?v6';
+import { audio } from './audio.js?v6'; // synthesized engine + crash sounds
 
 // --- Renderer & scene ---
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -37,14 +38,18 @@ sun.shadow.camera.far = 300;
 scene.add(sun);
 
 // --- World & trucks ---
-const { drivables, bounds, update: updateWorld } = buildWorld(scene);
+const mapName = new URLSearchParams(location.search).get('map') === 'city' ? 'city' : 'arena';
+const { drivables, bounds, solids = [], update: updateWorld } = (mapName === 'city' ? buildCity : buildWorld)(scene);
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyM') location.search = mapName === 'city' ? '' : '?map=city';
+});
 const garage = new Garage();
 await garage.init();
 const truck = new Truck();
 scene.add(truck.root);
 const flames = new BoostFlames(truck.root);
 const ball = new Ball(scene);
-const characters = await loadCharacters(scene);
+const characters = await loadCharacters(scene, mapName);
 
 // --- HUD ---
 const speedEl = document.getElementById('speed-value');
@@ -114,9 +119,9 @@ function tick() {
   else if (cycle) switchTruck(garage.index + cycle);
 
   if (input.resetQueued) ball.reset(); // R resets ball along with truck
-  truck.update(dt, input, drivables, bounds);
-  ball.update(dt, truck, drivables, bounds);
-  for (const c of characters) c.update(dt, truck, ball, drivables);
+  truck.update(dt, input, drivables, bounds, solids);
+  ball.update(dt, truck, drivables, bounds, solids);
+  for (const c of characters) c.update(dt, truck, ball, drivables, solids);
   flames.update(dt, truck.boosting);
   updateWorld(dt, [
     {

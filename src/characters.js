@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-import { tightBox } from './truck.js?v1784500641';
+import { tightBox } from './truck.js?v1784500963';
 
 // Arena characters — they watch the truck from afar, sprint away when it
 // closes in, and get launched (bursting collectibles) when run over.
@@ -169,8 +169,8 @@ export async function loadCharacters(scene, mapName = 'arena') {
   const chars = [];
   for (let cfg of CONFIGS) {
     try {
-      if (mapName === 'city') {
-        if (cfg.rideTop) continue; // no speedway ring in the city
+      if (mapName !== 'arena') {
+        if (cfg.rideTop) continue; // stands exist only in the arena
         const kind = (cfg.url.match(/sonic|woody|buzz|alien/) || [])[0];
         cfg = { ...cfg, homes: (kind && CITY_HOMES[kind]) || cfg.homes, extraRandom: null };
       }

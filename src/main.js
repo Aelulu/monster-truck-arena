@@ -1,13 +1,14 @@
 import * as THREE from 'three';
-import { input } from './input.js?v1784500641';
-import { buildWorld } from './world.js?v1784500641';
-import { buildCity } from './city.js?v1784500641';
-import { Truck } from './truck.js?v1784500641';
-import { Garage } from './garage.js?v1784500641';
-import { BoostFlames } from './effects.js?v1784500641';
-import { Ball } from './ball.js?v1784500641';
-import { loadCharacters } from './characters.js?v1784500641';
-import { audio } from './audio.js?v1784500641'; // synthesized engine + crash sounds
+import { input } from './input.js?v1784500963';
+import { buildWorld } from './world.js?v1784500963';
+import { buildCity } from './city.js?v1784500963';
+import { buildRoom } from './room.js?v1784500963';
+import { Truck } from './truck.js?v1784500963';
+import { Garage } from './garage.js?v1784500963';
+import { BoostFlames } from './effects.js?v1784500963';
+import { Ball } from './ball.js?v1784500963';
+import { loadCharacters } from './characters.js?v1784500963';
+import { audio } from './audio.js?v1784500963'; // synthesized engine + crash sounds
 
 // --- Renderer & scene ---
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -38,10 +39,15 @@ sun.shadow.camera.far = 300;
 scene.add(sun);
 
 // --- World & trucks ---
-const mapName = new URLSearchParams(location.search).get('map') === 'city' ? 'city' : 'arena';
-const { drivables, bounds, solids = [], update: updateWorld } = (mapName === 'city' ? buildCity : buildWorld)(scene);
+const MAP_ORDER = ['arena', 'city', 'room'];
+const qp = new URLSearchParams(location.search).get('map');
+const mapName = MAP_ORDER.includes(qp) ? qp : 'arena';
+const builders = { arena: buildWorld, city: buildCity, room: buildRoom };
+const { drivables, bounds, solids = [], update: updateWorld } = builders[mapName](scene);
 window.addEventListener('keydown', (e) => {
-  if (e.code === 'KeyM') location.search = mapName === 'city' ? '' : '?map=city';
+  if (e.code === 'KeyM') {
+    location.search = '?map=' + MAP_ORDER[(MAP_ORDER.indexOf(mapName) + 1) % MAP_ORDER.length];
+  }
 });
 const garage = new Garage();
 await garage.init();

@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { input } from './input.js';
-import { buildWorld } from './world.js';
-import { Truck } from './truck.js';
-import { Garage } from './garage.js';
-import { BoostFlames } from './effects.js';
-import { Ball } from './ball.js';
-import { loadCharacters } from './characters.js';
-import { audio } from './audio.js'; // synthesized engine + crash sounds
+import { input } from './input.js?v5';
+import { buildWorld } from './world.js?v5';
+import { Truck } from './truck.js?v5';
+import { Garage } from './garage.js?v5';
+import { BoostFlames } from './effects.js?v5';
+import { Ball } from './ball.js?v5';
+import { loadCharacters } from './characters.js?v5';
+import { audio } from './audio.js?v5'; // synthesized engine + crash sounds
 
 // --- Renderer & scene ---
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });

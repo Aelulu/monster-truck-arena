@@ -204,7 +204,7 @@ export function buildWorld(scene) {
   for (let i = 0; i < 24; i++) {
     const angle = (i / 24) * Math.PI * 2;
     const tire = new THREE.Mesh(tireGeo, tireMat);
-    tire.position.set(Math.cos(angle) * 169, 0.45 + 18.2, Math.sin(angle) * 169);
+    tire.position.set(Math.cos(angle) * 169, 0.45 + 17.6, Math.sin(angle) * 169);
     tire.castShadow = true;
     scene.add(tire);
   }
@@ -212,16 +212,17 @@ export function buildWorld(scene) {
   // --- Banked ring road: wraps the whole stadium, curving up and inward
   // like a velodrome. Carve around it at speed, ride high on the banking,
   // and launch off it — the curve feeds straight into the ramp-launch physics.
+  // Mario Kart-style: the road is FLAT across its width but tilted as a
+  // whole (constant bank angle ≈ 23°), wrapping the stadium like a speedway.
   const BANK_INNER = 128;
-  const BANK_RC = 55; // curvature radius of the banking profile
-  const roadY = (r) =>
-    r <= BANK_INNER ? 0 : BANK_RC - Math.sqrt(Math.max(BANK_RC * BANK_RC - (r - BANK_INNER) ** 2, 1));
+  const BANK_OUTER = 170;
+  const BANK_SLOPE = 18 / (BANK_OUTER - BANK_INNER);
+  const roadY = (r) => (r <= BANK_INNER ? 0 : (r - BANK_INNER) * BANK_SLOPE);
   {
-    const pts = [];
-    for (let i = 0; i <= 24; i++) {
-      const r = BANK_INNER + (i / 24) * 42; // out to r=170, top ≈ 19 high
-      pts.push(new THREE.Vector2(r, roadY(r)));
-    }
+    const pts = [
+      new THREE.Vector2(BANK_INNER, 0),
+      new THREE.Vector2(BANK_OUTER, roadY(BANK_OUTER)),
+    ];
     const bank = new THREE.Mesh(
       new THREE.LatheGeometry(pts, 96),
       new THREE.MeshStandardMaterial({ color: 0x4f545e, roughness: 0.9, side: THREE.DoubleSide })
@@ -230,12 +231,35 @@ export function buildWorld(scene) {
     scene.add(bank);
     drivables.push(bank);
   }
-  // inner edge line where dirt meets road
-  const edgeGeo = new THREE.RingGeometry(127, 129, 96);
-  edgeGeo.rotateX(-Math.PI / 2);
-  const edge = new THREE.Mesh(edgeGeo, new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.7 }));
-  edge.position.y = 0.05;
-  scene.add(edge);
+  // Mario Kart red/white curbs along both edges, and a dashed center line
+  const curbMats = [
+    new THREE.MeshStandardMaterial({ color: 0xd63031, roughness: 0.6 }),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }),
+  ];
+  const bankAngle = Math.atan(BANK_SLOPE);
+  for (const [rr, count] of [[130.5, 56], [167, 68]]) {
+    const arc = (2 * Math.PI * rr) / count;
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2;
+      const curb = new THREE.Mesh(new THREE.BoxGeometry(arc * 0.92, 0.35, 3), curbMats[i % 2]);
+      const y = roadY(rr) + 0.1;
+      curb.position.set(Math.cos(a) * rr, y, Math.sin(a) * rr);
+      curb.lookAt(0, y - Math.tan(bankAngle) * rr * 0.0, 0);
+      curb.rotateX(-bankAngle); // lie flush on the tilted road
+      scene.add(curb);
+    }
+  }
+  const dashMat = new THREE.MeshStandardMaterial({ color: 0xf6e58d, roughness: 0.6 });
+  for (let i = 0; i < 40; i++) {
+    const a = (i / 40) * Math.PI * 2;
+    const rr = 149;
+    const dash = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.06, 5), dashMat);
+    const y = roadY(rr) + 0.12;
+    dash.position.set(Math.cos(a) * rr, y, Math.sin(a) * rr);
+    dash.lookAt(0, y, 0);
+    dash.rotateX(-bankAngle);
+    scene.add(dash);
+  }
 
   const skins = [0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524, 0xffdbac];
 

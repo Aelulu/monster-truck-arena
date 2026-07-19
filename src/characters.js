@@ -65,7 +65,7 @@ const CONFIGS = [
     url: 'assets/woody.glb',
     rigStyle: 'skeleton',
     height: 3.4,
-    homes: [[0, 141]],
+    homes: [[0, 133], [-115, -66], [80, 108]],
     runSpeed: 7,
     fleeRadius: 26,
     facing: 0,
@@ -73,6 +73,7 @@ const CONFIGS = [
     fleeSound: 'woody',
     armStyle: 'flail',
     radiusRange: [129, 164], // stays up in the bleacher ring
+    rideTop: true,           // stands on TOP of the bleachers, not under them
     bones: WOODY_BONES,
   },
   {
@@ -96,7 +97,7 @@ const CONFIGS = [
     url: 'assets/buzz.glb',
     rigStyle: 'skeleton',
     height: 4.0,
-    homes: [[99, -99]],
+    homes: [[94, -94], [-134, 0], [66, 117]],
     runSpeed: 8,
     fleeRadius: 26,
     facing: 0,
@@ -105,6 +106,7 @@ const CONFIGS = [
     armStyle: 'pump',
     armAmp: 1.6,
     radiusRange: [129, 164],
+    rideTop: true,
     bones: BUZZ_BONES,
   },
   {
@@ -173,7 +175,7 @@ const _probeRay = new THREE.Raycaster();
 // (so the elevated highway overhead doesn't count). 0 = open floor.
 function surfaceHeightAt(x, z, refY, drivables) {
   _probeRay.set(_probeOrigin.set(x, refY + 8, z), _probeDown);
-  _probeRay.far = 30;
+  _probeRay.far = 60;
   const hits = _probeRay.intersectObjects(drivables, false);
   if (!hits.length) return 0;
   const hit = hits.find((h) => h.point.y <= refY + 1.2) || hits[hits.length - 1];
@@ -379,7 +381,7 @@ export class Character {
       const nx = p.x + Math.sin(this.dir) * this.speed * dt;
       const nz = p.z + Math.cos(this.dir) * this.speed * dt;
       const airborne = this.glide > 0 || this.hopV > 0;
-      const surfH = drivables ? surfaceHeightAt(nx, nz, p.y, drivables) : 0;
+      const surfH = drivables ? surfaceHeightAt(nx, nz, cfg.rideTop ? 40 : p.y, drivables) : 0;
       if (!airborne && this.speed > 0.4 && drivables && surfH > p.y + 0.9) {
         // wall, ramp face, or too-tall step — bounce off, don't ghost through
         this.dir += 1.3 + Math.random() * 0.9;
@@ -424,7 +426,7 @@ export class Character {
       this.root.rotation.x += this.tumble.x * dt;
       this.root.rotation.y += this.tumble.y * dt;
       this.root.rotation.z += this.tumble.z * dt;
-      const floor = drivables ? surfaceHeightAt(p.x, p.z, p.y, drivables) : 0;
+      const floor = drivables ? surfaceHeightAt(p.x, p.z, cfg.rideTop ? 40 : p.y, drivables) : 0;
       if (p.y < floor && this.vel.y < 0) {
         p.y = floor;
         this.state = 'down';

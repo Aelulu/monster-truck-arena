@@ -73,8 +73,13 @@ class Input {
     }
     if (!!pad !== this.padConnected) {
       this.padConnected = !!pad;
-      if (pad) console.log('Controller active:', pad.id, '| mapping:', pad.mapping || 'non-standard');
-      document.dispatchEvent(new CustomEvent('controller-status', { detail: this.padConnected }));
+      if (pad) {
+        console.log('Controller active:', pad.id, '| mapping:', pad.mapping || 'non-standard');
+        this.rumble(0.4, 0.6, 200); // hello-there pulse so they know it took
+      }
+      document.dispatchEvent(new CustomEvent('controller-status', {
+        detail: { connected: this.padConnected, id: pad ? pad.id : '' },
+      }));
     }
     return pad;
   }

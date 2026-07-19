@@ -1,14 +1,14 @@
 import * as THREE from 'three';
-import { input } from './input.js?v1784501544';
-import { buildWorld } from './world.js?v1784501544';
-import { buildCity } from './city.js?v1784501544';
-import { buildRoom } from './room.js?v1784501544';
-import { Truck } from './truck.js?v1784501544';
-import { Garage } from './garage.js?v1784501544';
-import { BoostFlames } from './effects.js?v1784501544';
-import { Ball } from './ball.js?v1784501544';
-import { loadCharacters } from './characters.js?v1784501544';
-import { audio } from './audio.js?v1784501544'; // synthesized engine + crash sounds
+import { input } from './input.js?v1784501937';
+import { buildWorld } from './world.js?v1784501937';
+import { buildCity } from './city.js?v1784501937';
+import { buildRoom } from './room.js?v1784501937';
+import { Truck } from './truck.js?v1784501937';
+import { Garage } from './garage.js?v1784501937';
+import { BoostFlames } from './effects.js?v1784501937';
+import { Ball } from './ball.js?v1784501937';
+import { loadCharacters } from './characters.js?v1784501937';
+import { audio } from './audio.js?v1784501937'; // synthesized engine + crash sounds
 
 // --- Renderer & scene ---
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -64,9 +64,25 @@ const characters = await loadCharacters(scene, mapName);
 const speedEl = document.getElementById('speed-value');
 const airtimeEl = document.getElementById('airtime');
 const truckNameEl = document.getElementById('truck-name');
+// Controller UX: browsers hide gamepads until a button is pressed, so show
+// a standing prompt, then a named confirmation once one wakes up.
 const padEl = document.getElementById('controller-status');
+padEl.textContent = '🎮 got a controller? press any button on it to connect';
+padEl.style.color = '#ffd24a';
 document.addEventListener('controller-status', (e) => {
-  padEl.textContent = e.detail ? '🎮 controller connected' : '';
+  const { connected, id } = e.detail || {};
+  if (connected) {
+    const name = (id || 'controller').split('(')[0].trim() || 'controller';
+    padEl.textContent = `🎮 ${name} connected`;
+    padEl.style.color = '#7fe07f';
+    clearTimeout(padEl._fade);
+    padEl._fade = setTimeout(() => { padEl.style.opacity = '0.45'; }, 5000);
+    padEl.style.opacity = '1';
+  } else {
+    padEl.textContent = '🎮 controller disconnected — press any button to reconnect';
+    padEl.style.color = '#ff8a80';
+    padEl.style.opacity = '1';
+  }
 });
 const crowdEl = document.getElementById('crowd-hits');
 document.addEventListener('crowd-hit', (e) => {

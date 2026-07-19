@@ -1,0 +1,4 @@
+node_modules/
+*.glb.orig
+*.glb.preopt
+.DS_Store

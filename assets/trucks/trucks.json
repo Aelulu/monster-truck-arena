@@ -1,0 +1,65 @@
+{
+  "_readme": "Optional per-truck overrides, keyed by glb filename without extension. All fields optional \u2014 trucks not listed here get auto-detection. Fields: label (display name), rotationYDeg (spin the model so its nose faces forward; try -90/90/180), targetLength (world size, default 5.5), lift (raise model if it sinks into the ground), wheelNodes (exact node names to use as wheels instead of auto-detection).",
+  "boneshaker": {
+    "label": "Bone Shaker",
+    "rotationYDeg": 90,
+    "wheelNodes": [
+      "Wheel_FL",
+      "Wheel_FR",
+      "Wheel_RL",
+      "Wheel_RR"
+    ],
+    "engine": "hotrod"
+  },
+  "graffiti": {
+    "label": "American Graffiti",
+    "wheelNodes": [
+      "SM_GoodYear_Terra_66_High.007",
+      "Rim_66.009",
+      "SM_GoodYear_Terra_66_High.009",
+      "Rim_66.010",
+      "SM_GoodYear_Terra_66_High.010",
+      "Rim_66.012",
+      "SM_GoodYear_Terra_66_High.011",
+      "Rim_66.011"
+    ],
+    "engine": "dragster"
+  },
+  "maxd": {
+    "label": "Max-D",
+    "wheelNodes": [
+      "Wheel_FL",
+      "Wheel_FR",
+      "Wheel_RL",
+      "Wheel_RR"
+    ],
+    "rotationYDeg": 180,
+    "engine": "supercharged"
+  },
+  "mcqueen": {
+    "label": "Lightning McQueen",
+    "rotationYDeg": 90,
+    "wheelNodes": [
+      "Object_4",
+      "Object_5",
+      "Object_6",
+      "Object_7",
+      "Object_8",
+      "Object_9",
+      "Object_10",
+      "Object_11"
+    ],
+    "engine": "race"
+  },
+  "gravedigger": {
+    "label": "Grave Digger",
+    "rotationYDeg": -90,
+    "wheelNodes": [
+      "DrawCall_0629",
+      "DrawCall_0630",
+      "DrawCall_0631",
+      "DrawCall_0632"
+    ],
+    "engine": "bigblock"
+  }
+}

@@ -150,11 +150,38 @@ export function buildCity(scene) {
     scene.add(ramp);
     drivables.push(ramp);
   };
+  const addCurvedRamp = (x, z, rotY, width, radius, exitDeg) => {
+    const theta = THREE.MathUtils.degToRad(exitDeg);
+    const shape = new THREE.Shape();
+    shape.moveTo(0, 0);
+    for (let i = 1; i <= 20; i++) {
+      const a = (i / 20) * theta;
+      shape.lineTo(radius * Math.sin(a), radius * (1 - Math.cos(a)));
+    }
+    shape.lineTo(radius * Math.sin(theta), 0);
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: width, bevelEnabled: false });
+    geo.translate(-(radius * Math.sin(theta)) / 2, 0, -width / 2);
+    const ramp = new THREE.Mesh(geo, rampMat);
+    ramp.position.set(x, 0, z);
+    ramp.rotation.y = rotY;
+    ramp.castShadow = true;
+    ramp.receiveShadow = true;
+    scene.add(ramp);
+    drivables.push(ramp);
+  };
+
+  // ramps everywhere — the circuit is a jump park
   addRamp(95, 0, Math.PI, 12, 16, 5);         // on the outer loop, east
   addRamp(-90, 30, 0, 12, 16, 5);             // outer loop, west
   addRamp(0, -100, -Math.PI / 2, 12, 18, 7);  // outer loop, south — big one
   addRamp(0, 45, Math.PI / 2, 10, 14, 4.5);   // inner loop, north
   addRamp(-45, -10, -Math.PI / 4, 9, 12, 4);  // inner loop kicker
+  addRamp(30, 92, Math.PI, 10, 14, 5);        // outer loop, north-east
+  addRamp(-30, -45, Math.PI / 2, 10, 14, 5);  // between loops, south
+  addRamp(55, -30, -Math.PI / 4, 9, 12, 4.5); // infield diagonal
+  addRamp(-70, 70, Math.PI / 4, 9, 12, 4.5);  // north-west diagonal
+  addCurvedRamp(-75, -75, -Math.PI / 4, 14, 30, 48); // mega: launches toward center
+  addCurvedRamp(75, 75, (3 * Math.PI) / 4, 14, 30, 48); // mega: opposite corner
 
   // park mounds on the infield
   const moundMat = new THREE.MeshStandardMaterial({ color: 0xa5764a, roughness: 1 });

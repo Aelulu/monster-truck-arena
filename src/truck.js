@@ -445,28 +445,33 @@ export class Truck {
     this.verticalVel += TUNING.gravity * dt;
     this.root.position.y += this.verticalVel * dt;
 
+    // On tilted surfaces the physics point is the truck's center, so its
+    // downhill side visually digs into the road. Ride height rises with
+    // surface tilt to keep the whole truck above the surface.
+    const lift = surface ? (1 - surface.normal.y) * 2.4 : 0;
+    const effY = groundY + lift;
     if (this.grounded && this.verticalVel <= 0.01 && this.climbRate < 8 &&
-        this.root.position.y > groundY && this.root.position.y < groundY + 1.3) {
+        this.root.position.y > effY - 0.01 && this.root.position.y < effY + 1.3) {
       // planted: follow terrain downhill (banking, mound backsides) instead
       // of micro-detaching into the air every frame. Ramp lips still launch
       // because their climbRate is far above the threshold.
-      this.root.position.y = groundY;
+      this.root.position.y = effY;
       this.verticalVel = 0;
-      if (surface) this.groundNormal.lerp(surface.normal, Math.min(1, dt * 12));
-    } else if (this.root.position.y <= groundY + 0.01 && this.verticalVel <= 0) {
+      if (surface) this.groundNormal.lerp(surface.normal, Math.min(1, dt * 25));
+    } else if (this.root.position.y <= effY + 0.01 && this.verticalVel <= 0) {
       if (!this.grounded && this.airTime > 0.35) {
         this.squash = Math.min(1, this.airTime * 0.7); // landing thump
         if (typeof document !== 'undefined') {
           document.dispatchEvent(new CustomEvent('truck-landed', { detail: Math.min(1, this.airTime / 2.5) }));
         }
       }
-      this.root.position.y = groundY;
+      this.root.position.y = effY;
       this.verticalVel = 0;
       this.grounded = true;
       this.airTime = 0;
       this.jumpsUsed = 0;
-      if (surface) this.groundNormal.lerp(surface.normal, Math.min(1, dt * 12));
-    } else if (this.root.position.y > groundY + 0.15) {
+      if (surface) this.groundNormal.lerp(surface.normal, Math.min(1, dt * 25));
+    } else if (this.root.position.y > effY + 0.15) {
       if (this.grounded && this.climbRate > 1) {
         // Just left a ramp lip — launch, with extra hang time for tricks.
         const launch = Math.min(this.climbRate * TUNING.launchBoost, TUNING.launchCap);

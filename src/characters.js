@@ -66,6 +66,7 @@ export const CONFIGS = [
     rigStyle: 'skeleton',
     height: 3.4,
     homes: [[0, 141.6], [-127.8, -73.8], [133, 76.8]], // tier rows, among the crowd
+    extraRandom: { count: 5, rMin: 135, rMax: 160 },     // + scattered through the stands
     runSpeed: 7,
     fleeRadius: 26,
     facing: 0,
@@ -98,6 +99,7 @@ export const CONFIGS = [
     rigStyle: 'skeleton',
     height: 4.0,
     homes: [[100.1, -100.1], [-147.6, 0], [79.8, 138.2]], // tier rows, among the crowd
+    extraRandom: { count: 5, rMin: 135, rMax: 160 },
     runSpeed: 8,
     fleeRadius: 26,
     facing: 0,
@@ -153,7 +155,15 @@ export async function loadCharacters(scene) {
     try {
       if (!gltfCache.has(cfg.url)) gltfCache.set(cfg.url, loader.loadAsync(cfg.url));
       const gltf = await gltfCache.get(cfg.url);
-      for (const [x, z] of cfg.homes) {
+      const homes = [...cfg.homes];
+      if (cfg.extraRandom) {
+        for (let i = 0; i < cfg.extraRandom.count; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const r = cfg.extraRandom.rMin + Math.random() * (cfg.extraRandom.rMax - cfg.extraRandom.rMin);
+          homes.push([Math.cos(a) * r, Math.sin(a) * r]);
+        }
+      }
+      for (const [x, z] of homes) {
         chars.push(new Character(
           scene, SkeletonUtils.clone(gltf.scene), gltf.animations, new THREE.Vector3(x, 0, z), cfg));
       }

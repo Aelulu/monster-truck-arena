@@ -63,6 +63,61 @@
       transition: opacity 0.15s;
     }
     #airtime.show { opacity: 1; }
+    #pad-btn {
+      position: absolute;
+      top: 18px;
+      right: 24px;
+      pointer-events: auto;
+      cursor: pointer;
+      font: 600 13px "Avenir Next", sans-serif;
+      color: #fff;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.35);
+      border-radius: 8px;
+      padding: 8px 12px;
+      backdrop-filter: blur(4px);
+    }
+    #pad-btn:hover { background: rgba(0,0,0,0.6); }
+    #pad-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.55);
+      pointer-events: auto;
+    }
+    #pad-modal.show { display: flex; }
+    #pad-modal .panel {
+      background: #1c2430;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 14px;
+      padding: 26px 30px;
+      max-width: 430px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    #pad-modal h2 { margin-bottom: 10px; font-size: 19px; }
+    #pad-modal ol { margin: 0 0 14px 18px; }
+    #pad-scan {
+      background: rgba(0,0,0,0.35);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: monospace;
+      font-size: 12px;
+      min-height: 40px;
+      margin-bottom: 14px;
+      white-space: pre-wrap;
+    }
+    #pad-close {
+      pointer-events: auto;
+      cursor: pointer;
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 6px;
+      padding: 6px 14px;
+    }
     #truck-name {
       position: absolute;
       top: 20px;
@@ -98,6 +153,18 @@
       <div id="controller-status" style="color:#7fe07f"></div>
     </div>
     <div id="truck-name"></div>
+    <button id="pad-btn">🎮 Connect controller</button>
+    <div id="pad-modal">
+      <div class="panel">
+        <h2>🎮 Connect a Controller</h2>
+        <ol>
+          <li>Pair it to your computer (System Settings &rarr; Bluetooth), or plug in a cable</li>
+          <li>Then <b>press and hold A</b> on the controller</li>
+        </ol>
+        <div id="pad-scan">Scanning&hellip;</div>
+        <button id="pad-close">close</button>
+      </div>
+    </div>
     <div id="speedo">
       <div id="crowd-hits" style="font-size:15px;font-weight:700;color:#ffd24a;margin-bottom:6px;"></div>
       <div class="value" id="speed-value">0</div>
@@ -114,6 +181,6 @@
       }
     }
   </script>
-  <script type="module" src="./src/main.js?v1784502057"></script>
+  <script type="module" src="./src/main.js?v1784502187"></script>
 </body>
 </html>

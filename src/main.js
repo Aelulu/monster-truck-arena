@@ -1,14 +1,14 @@
 import * as THREE from 'three';
-import { input } from './input.js?v1784502057';
-import { buildWorld } from './world.js?v1784502057';
-import { buildCity } from './city.js?v1784502057';
-import { buildRoom } from './room.js?v1784502057';
-import { Truck } from './truck.js?v1784502057';
-import { Garage } from './garage.js?v1784502057';
-import { BoostFlames } from './effects.js?v1784502057';
-import { Ball } from './ball.js?v1784502057';
-import { loadCharacters } from './characters.js?v1784502057';
-import { audio } from './audio.js?v1784502057'; // synthesized engine + crash sounds
+import { input } from './input.js?v1784502187';
+import { buildWorld } from './world.js?v1784502187';
+import { buildCity } from './city.js?v1784502187';
+import { buildRoom } from './room.js?v1784502187';
+import { Truck } from './truck.js?v1784502187';
+import { Garage } from './garage.js?v1784502187';
+import { BoostFlames } from './effects.js?v1784502187';
+import { Ball } from './ball.js?v1784502187';
+import { loadCharacters } from './characters.js?v1784502187';
+import { audio } from './audio.js?v1784502187'; // synthesized engine + crash sounds
 
 // --- Renderer & scene ---
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -64,18 +64,37 @@ const characters = await loadCharacters(scene, mapName);
 const speedEl = document.getElementById('speed-value');
 const airtimeEl = document.getElementById('airtime');
 const truckNameEl = document.getElementById('truck-name');
-// TEMP DIAGNOSTIC: surface script errors + raw gamepad state on the HUD
-const diagEl = document.createElement('div');
-diagEl.style.cssText = 'position:fixed;top:6px;left:8px;font:11px monospace;color:#ffee99;text-shadow:0 1px 3px #000;z-index:99;white-space:pre;pointer-events:none;';
-document.getElementById('hud').appendChild(diagEl);
-window.addEventListener('error', (e) => { diagEl.textContent += `\nERROR: ${e.message}`; });
-let diagTicks = 0;
-setInterval(() => {
-  const pads = navigator.getGamepads ? Array.from(navigator.getGamepads()) : null;
-  const desc = pads === null ? 'getGamepads API MISSING'
-    : pads.map((g, i) => g ? `${i}:${g.id.slice(0, 28)} conn=${g.connected} map=${g.mapping || 'none'} btns=${g.buttons.length}` : `${i}:empty`).join(' | ');
-  diagEl.textContent = `loop=${diagTicks} pads=[${desc}]` + (diagEl.textContent.includes('ERROR') ? '\n' + diagEl.textContent.split('\n').slice(1).join('\n') : '');
-}, 1000);
+// Deliberate connect flow: a pairing-style dialog with a live scanner.
+const padModal = document.getElementById('pad-modal');
+const padScan = document.getElementById('pad-scan');
+let scanTimer = null;
+function openPadModal() {
+  padModal.classList.add('show');
+  const render = () => {
+    const pads = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+    if (!pads.length) {
+      const dots = '.'.repeat(1 + (Math.floor(performance.now() / 400) % 3));
+      padScan.textContent = `Scanning for controllers${dots}\n(none visible yet — the browser only reveals a controller after you press a button on it)`;
+      padScan.style.color = '#ffd24a';
+    } else {
+      padScan.textContent = pads.map((g) => `✓ ${g.id.split('(')[0].trim()}  — connected`).join('\n');
+      padScan.style.color = '#7fe07f';
+    }
+  };
+  render();
+  scanTimer = setInterval(render, 400);
+}
+function closePadModal() {
+  padModal.classList.remove('show');
+  clearInterval(scanTimer);
+}
+document.getElementById('pad-btn').addEventListener('click', openPadModal);
+document.getElementById('pad-close').addEventListener('click', closePadModal);
+document.addEventListener('controller-status', (e) => {
+  if (e.detail && e.detail.connected && padModal.classList.contains('show')) {
+    setTimeout(closePadModal, 1600); // show the green ✓ then get out of the way
+  }
+});
 
 // Controller UX: browsers hide gamepads until a button is pressed, so show
 // a standing prompt, then a named confirmation once one wakes up.
@@ -149,7 +168,6 @@ function tick() {
   const dt = Math.min(accum, 1 / 30); // clamp so tab-switch doesn't teleport
   accum = 0;
 
-  diagTicks++;
   input.update(); // polls gamepad state each frame
 
   const select = input.consumeSelect();

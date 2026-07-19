@@ -1,4 +1,4 @@
-import { loadTruckModel, buildPlaceholderTruck } from './truck.js?v1784502057';
+import { loadTruckModel, buildPlaceholderTruck } from './truck.js?v1784502187';
 
 // Discovers trucks from /api/trucks (every .glb in assets/trucks/) and their
 // optional overrides from trucks.json. Loaded models are cached so switching

@@ -470,11 +470,21 @@ export class Truck {
         this.airPitch += ((Math.PI * 2) / TUNING.flipDuration) * dt;
       }
       this.airPitch += input.pitch * TUNING.airPitchSpeed * dt;
+      // Landing assist: on the way down, ease rotation to the nearest
+      // wheels-down orientation (whole flips), stronger near the ground —
+      // the truck almost always lands on its wheels.
+      if (this.verticalVel < 0 && this.flipTimer <= 0) {
+        const height = Math.max(this.root.position.y - groundY, 1);
+        const target = Math.round(this.airPitch / (Math.PI * 2)) * Math.PI * 2;
+        const assist = THREE.MathUtils.clamp(16 / height, 1, 8);
+        this.airPitch += (target - this.airPitch) * Math.min(1, dt * assist);
+      }
     } else {
       this.flipTimer = 0;
-      // wrap so a completed flip settles forward, not by unwinding backwards
+      // wrap so a completed flip settles forward, not by unwinding backwards;
+      // fast decay = never stuck lying flipped on the ground
       const wrapped = THREE.MathUtils.euclideanModulo(this.airPitch + Math.PI, Math.PI * 2) - Math.PI;
-      this.airPitch = THREE.MathUtils.lerp(wrapped, 0, Math.min(1, dt * 8));
+      this.airPitch = THREE.MathUtils.lerp(wrapped, 0, Math.min(1, dt * 14));
     }
 
     // --- Orientation: face heading, tilt to slope, then apply air pitch ---

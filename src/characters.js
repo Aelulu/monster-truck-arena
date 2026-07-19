@@ -20,6 +20,17 @@ const UP = new THREE.Vector3(0, 1, 0);
 const WALL_LIMIT = 121;
 const GLIDE_DUR = 2.2; // seconds per Buzz glide-hop
 
+const WOODY_BONES = {
+  thighL: /L_Thigh/, thighR: /R_Thigh/, calfL: /L_Calf/, calfR: /R_Calf/,
+  armL: /L_UpperArm/, armR: /R_UpperArm/, foreL: /L_Forearm/, foreR: /R_Forearm/,
+  spine: /Spine1/, head: /Head/,
+};
+const BUZZ_BONES = {
+  thighL: /bip_hip_L/, thighR: /bip_hip_R/, calfL: /bip_knee_L/, calfR: /bip_knee_R/,
+  armL: /bip_upperArm_L/i, armR: /bip_upperarm_R/i, foreL: /bip_lowerArm_L/i, foreR: /bip_lowerArm_R/i,
+  spine: /bip_spine_1/, head: /bip_head/,
+};
+
 const CONFIGS = [
   {
     // NOTE: sonic-hd.glb LOOKS rigged (95 bones in the file) but none of its
@@ -47,11 +58,22 @@ const CONFIGS = [
     collectible: 'coins',
     fleeSound: 'woody',
     armStyle: 'flail',
-    bones: {
-      thighL: /L_Thigh/, thighR: /R_Thigh/, calfL: /L_Calf/, calfR: /R_Calf/,
-      armL: /L_UpperArm/, armR: /R_UpperArm/, foreL: /L_Forearm/, foreR: /R_Forearm/,
-      spine: /Spine1/, head: /Head/,
-    },
+    bones: WOODY_BONES,
+  },
+  {
+    // Woody's stunt double watches from the north stands
+    url: 'assets/woody.glb',
+    rigStyle: 'skeleton',
+    height: 3.4,
+    homes: [[0, 141]],
+    runSpeed: 7,
+    fleeRadius: 26,
+    facing: 0,
+    collectible: 'coins',
+    fleeSound: 'woody',
+    armStyle: 'flail',
+    radiusRange: [129, 164], // stays up in the bleacher ring
+    bones: WOODY_BONES,
   },
   {
     // KH3 Buzz — properly skinned biped rig, gets the full Woody treatment
@@ -67,11 +89,23 @@ const CONFIGS = [
     armAmp: 1.6,       // extra arm swing
     fleeSound: 'buzz',
     canGlide: true,    // he has wings — panicked glide-hops when cornered
-    bones: {
-      thighL: /bip_hip_L/, thighR: /bip_hip_R/, calfL: /bip_knee_L/, calfR: /bip_knee_R/,
-      armL: /bip_upperArm_L/i, armR: /bip_upperarm_R/i, foreL: /bip_lowerArm_L/i, foreR: /bip_lowerArm_R/i,
-      spine: /bip_spine_1/, head: /bip_head/,
-    },
+    bones: BUZZ_BONES,
+  },
+  {
+    // Buzz's double patrols the south-east stands (no gliding up there)
+    url: 'assets/buzz.glb',
+    rigStyle: 'skeleton',
+    height: 4.0,
+    homes: [[99, -99]],
+    runSpeed: 8,
+    fleeRadius: 26,
+    facing: 0,
+    collectible: 'stars',
+    fleeSound: 'buzz',
+    armStyle: 'pump',
+    armAmp: 1.6,
+    radiusRange: [129, 164],
+    bones: BUZZ_BONES,
   },
   {
     url: 'assets/alien.glb',
@@ -111,10 +145,12 @@ function lootParts(kind) {
 
 export async function loadCharacters(scene) {
   const loader = new GLTFLoader();
+  const gltfCache = new Map();
   const chars = [];
   for (const cfg of CONFIGS) {
     try {
-      const gltf = await loader.loadAsync(cfg.url);
+      if (!gltfCache.has(cfg.url)) gltfCache.set(cfg.url, loader.loadAsync(cfg.url));
+      const gltf = await gltfCache.get(cfg.url);
       for (const [x, z] of cfg.homes) {
         chars.push(new Character(
           scene, SkeletonUtils.clone(gltf.scene), gltf.animations, new THREE.Vector3(x, 0, z), cfg));
@@ -342,19 +378,27 @@ export class Character {
 
       const nx = p.x + Math.sin(this.dir) * this.speed * dt;
       const nz = p.z + Math.cos(this.dir) * this.speed * dt;
-      // don't ghost through ramps, pillars, or the stands — bounce off
-      if (this.speed > 0.4 && drivables && p.y < 0.5 &&
-          surfaceHeightAt(nx, nz, p.y, drivables) > 0.6) {
+      const airborne = this.glide > 0 || this.hopV > 0;
+      const surfH = drivables ? surfaceHeightAt(nx, nz, p.y, drivables) : 0;
+      if (!airborne && this.speed > 0.4 && drivables && surfH > p.y + 0.9) {
+        // wall, ramp face, or too-tall step — bounce off, don't ghost through
         this.dir += 1.3 + Math.random() * 0.9;
       } else {
         p.x = nx;
         p.z = nz;
+        // follow the surface (bowl slope, mounds) when not glide/hopping
+        if (!airborne) p.y += (surfH - p.y) * Math.min(1, dt * 12);
       }
+      const [rMin, rMax] = cfg.radiusRange || [0, WALL_LIMIT];
       const rad = Math.hypot(p.x, p.z);
-      if (rad > WALL_LIMIT) {
-        p.x *= WALL_LIMIT / rad;
-        p.z *= WALL_LIMIT / rad;
-        this.dir += Math.PI * 0.5; // bounce along the wall
+      if (rad > rMax) {
+        p.x *= rMax / rad;
+        p.z *= rMax / rad;
+        this.dir += Math.PI * 0.5; // bounce along the boundary
+      } else if (rMin > 0 && rad < rMin && rad > 0.01) {
+        p.x *= rMin / rad;
+        p.z *= rMin / rad;
+        this.dir += Math.PI * 0.5;
       }
 
       if (this.state === 'flee') {
@@ -380,8 +424,9 @@ export class Character {
       this.root.rotation.x += this.tumble.x * dt;
       this.root.rotation.y += this.tumble.y * dt;
       this.root.rotation.z += this.tumble.z * dt;
-      if (p.y < 0 && this.vel.y < 0) {
-        p.y = 0;
+      const floor = drivables ? surfaceHeightAt(p.x, p.z, p.y, drivables) : 0;
+      if (p.y < floor && this.vel.y < 0) {
+        p.y = floor;
         this.state = 'down';
         this.respawnAt = this.time + 4;
       }

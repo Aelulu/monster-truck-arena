@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-import { tightBox } from './truck.js?v1784501937';
+import { tightBox } from './truck.js?v1784502057';
 
 // Arena characters — they watch the truck from afar, sprint away when it
 // closes in, and get launched (bursting collectibles) when run over.

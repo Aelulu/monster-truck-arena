@@ -246,7 +246,9 @@ export function buildWorld(scene) {
       step.position.set(Math.cos(mid) * r, 1.35 + t * 2.7, Math.sin(mid) * r);
       step.lookAt(0, step.position.y, 0);
       scene.add(step);
-      drivables.push(step); // trucks can land on and ride the grandstands
+      // NOT drivable: the straight boxes jut through the curved bowl and
+      // their hidden edges flipped trucks. The smooth bowl collider is the
+      // only stands physics surface — steps are visual.
     }
   }
 

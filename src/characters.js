@@ -31,7 +31,7 @@ const BUZZ_BONES = {
   spine: /bip_spine_1/, head: /bip_head/,
 };
 
-const CONFIGS = [
+export const CONFIGS = [
   {
     // NOTE: sonic-hd.glb LOOKS rigged (95 bones in the file) but none of its
     // meshes carry joint weights — the skeleton is orphaned, so bone
@@ -388,8 +388,12 @@ export class Character {
       } else {
         p.x = nx;
         p.z = nz;
-        // follow the surface (bowl slope, mounds) when not glide/hopping
-        if (!airborne) p.y += (surfH - p.y) * Math.min(1, dt * 12);
+        // follow the surface (bowl slope, mounds) when not glide/hopping;
+        // snap on the very first frame so nobody spawns buried
+        if (!airborne) {
+          if (this._snapped) p.y += (surfH - p.y) * Math.min(1, dt * 12);
+          else { p.y = surfH; this._snapped = true; }
+        }
       }
       const [rMin, rMax] = cfg.radiusRange || [0, WALL_LIMIT];
       const rad = Math.hypot(p.x, p.z);

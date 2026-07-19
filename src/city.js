@@ -185,7 +185,7 @@ export function buildCity(scene) {
 
   // park mounds on the infield
   const moundMat = new THREE.MeshStandardMaterial({ color: 0xa5764a, roughness: 1 });
-  for (const [mx, mz] of [[0, 0], [70, 70], [-70, -60]]) {
+  for (const [mx, mz] of [[70, 70], [-70, -60]]) {
     const geo = new THREE.SphereGeometry(6, 20, 14);
     geo.scale(1, 0.45, 1);
     const mound = new THREE.Mesh(geo, moundMat);
